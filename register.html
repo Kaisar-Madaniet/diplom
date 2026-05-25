@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="min-height: 100vh; position: relative; background: url('/static/bg.png') no-repeat center center; background-size: cover;" class="login-bg">
+    <div class="container-fluid d-flex flex-column" style="min-height: 100vh; position: relative; z-index: 1;">
+        <div class="p-4 p-md-5 d-flex align-items-center">
+            <div class="bg-white text-primary rounded-circle d-flex justify-content-center align-items-center shadow" style="width: 80px; height: 80px; flex-shrink: 0;"><i class="fa-solid fa-chart-pie" style="font-size: 2.5rem;"></i></div>
+            <h2 class="fw-bold text-white mb-0 ms-4" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Жаңа аккаунт<br>жасаңыз</h2>
+        </div>
+        <div class="flex-grow-1 d-flex justify-content-center align-items-center p-3 mb-5">
+            <div class="card border-0 p-5 rounded-4 bg-white w-100" style="max-width: 550px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);">
+                <h2 class="text-center fw-bold mb-5 text-dark">Жүйеге тіркелу</h2>
+                {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}<div class="alert alert-{{ messages[0][0] }} rounded-3 fw-bold fs-5">{{ messages[0][1] }}</div>{% endif %} {% endwith %}
+                <form method="POST">
+                    <input type="text" name="username" class="form-control form-control-lg bg-light border-0 py-3 mb-4 shadow-sm fw-medium fs-5" placeholder="Логин" required>
+                    <input type="email" name="email" class="form-control form-control-lg bg-light border-0 py-3 mb-4 shadow-sm fw-medium fs-5" placeholder="Email" required>
+                    <input type="password" name="password" class="form-control form-control-lg bg-light border-0 py-3 mb-5 shadow-sm fw-medium fs-5" placeholder="Құпиясөз" required>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold py-3 shadow-sm rounded-3 fs-4">Аккаунт жасау</button>
+                </form>
+                <div class="text-center mt-5"><span class="text-muted fs-5">Аккаунтыңыз бар ма?</span> <a href="/login" class="fw-bold text-primary text-decoration-none fs-5 ms-1">Кіру</a></div>
+            </div>
+        </div>
+    </div>
+</div>
+<style> body { padding-bottom: 0 !important; } body.dark-mode .login-bg { background-blend-mode: multiply; background-color: #1a1a1a !important; } </style>
+{% endblock %}

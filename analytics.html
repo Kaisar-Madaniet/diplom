@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+    <div class="custom-header">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <i class="fa-solid fa-bars fs-4 text-white-custom" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" style="cursor:pointer;"></i>
+            <h4 class="m-0 fw-bold mx-auto text-white-custom">Аналитика</h4>
+            <div style="width: 24px;"></div>
+        </div>
+        
+        <div class="balance-card p-4 text-center shadow-sm bg-white">
+            <div class="row g-0 align-items-center">
+                <div class="col-4 border-end">
+                    <small class="text-muted d-block fw-medium mb-1">Кірістер</small>
+                    <span class="fw-bold text-success fs-4" id="grandIncome">0</span>
+                </div>
+                <div class="col-4 border-end">
+                    <small class="text-muted d-block fw-medium mb-1">Теңгерім</small>
+                    <span class="fw-bold text-primary fs-4" id="grandBalance">0</span>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted d-block fw-medium mb-1">Шығыстар</small>
+                    <span class="fw-bold text-danger fs-4" id="grandExpense">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-flex bg-white rounded-4 shadow-sm mb-4 p-1">
+        <button id="btn-pie" class="btn btn-primary flex-fill fw-bold rounded-3 border-0 py-2 fs-5" onclick="switchMain('pie')"><i class="fa-solid fa-chart-pie me-2"></i>Диаграмма</button>
+        <button id="btn-line" class="btn btn-light flex-fill fw-bold rounded-3 border-0 py-2 fs-5 text-secondary" onclick="switchMain('line')"><i class="fa-solid fa-chart-line me-2"></i>Сызықтық график</button>
+    </div>
+    
+    <div class="row g-4 mb-3">
+        <div class="col-md-4">
+            <label class="small text-dark mb-2 fw-bold">Кезеңнің басы:</label>
+            <input type="date" id="dateFrom" class="form-control border-0 shadow-sm fw-bold text-secondary py-2 custom-datepicker" onchange="renderCurrent()">
+        </div>
+        <div class="col-md-4">
+            <label class="small text-dark mb-2 fw-bold">Кезеңнің соңы:</label>
+            <input type="date" id="dateTo" class="form-control border-0 shadow-sm fw-bold text-secondary py-2 custom-datepicker" onchange="renderCurrent()">
+        </div>
+        <div class="col-md-4">
+            <label class="small text-dark mb-2 fw-bold">Шот:</label>
+            <select id="filterAccount" class="form-select border-0 shadow-sm fw-bold text-secondary py-2" onchange="renderCurrent()">
+                <option value="all">Барлық шоттар</option>
+                {% for acc in user_accounts %}
+                <option value="{{ acc.id }}">{{ acc.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    
+    <div class="mb-4">
+        <label class="small text-dark mb-2 fw-bold">Санаттар:</label>
+        <div class="bg-white rounded-3 shadow-sm p-4" style="max-height: 250px; overflow-y: auto;" id="categoryCheckboxes">
+        </div>
+    </div>
+    
+    <div class="card shadow-sm chart-card border-0 rounded-4 bg-white mb-4">
+        <div class="card-body p-0">
+            <div class="custom-tabs d-flex m-4 shadow-sm bg-light">
+                <div class="tab flex-fill active py-3 fs-5" id="tab-expense" onclick="switchTab('expense')">График: Шығыстар</div>
+                <div class="tab flex-fill py-3 fs-5" id="tab-income" onclick="switchTab('income')">График: Кірістер</div>
+            </div>
+            
+            <div id="view-pie">
+                <div class="p-5 d-flex justify-content-center position-relative">
+                    <div style="width: 350px; height: 350px; position: relative;">
+                        <canvas id="mainChart"></canvas>
+                        <div class="chart-center-text">
+                            <div id="chartTotal" class="fw-bold text-dark" style="font-size: 3rem; letter-spacing: -1px;">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-5 pb-5" id="categoryList"></div>
+            </div>
+
+            <div id="view-line" style="display: none;">
+                <div class="p-4" style="height: 400px; position: relative;">
+                    <canvas id="lineTrendChart"></canvas>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <div class="d-flex flex-wrap gap-3 mb-5">
+        <div class="btn-group flex-fill shadow-sm">
+            <input type="radio" class="btn-check" name="calc_mode" id="mode_exact" autocomplete="off" checked>
+            <label class="btn btn-outline-primary fw-bold py-2 fs-5" for="mode_exact">Дәл есеп</label>
+            <input type="radio" class="btn-check" name="calc_mode" id="mode_summary" autocomplete="off">
+            <label class="btn btn-outline-primary fw-bold py-2 fs-5" for="mode_summary">Жиынтық</label>
+        </div>
+        
+        <button onclick="exportData('excel')" class="btn btn-success flex-fill fw-bold py-2 shadow-sm fs-5"><i class="fa-solid fa-file-excel me-2"></i>Excel</button>
+        <button onclick="exportData('word')" class="btn btn-primary flex-fill fw-bold py-2 shadow-sm fs-5"><i class="fa-solid fa-file-word me-2"></i>Word</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentChart = null; 
+let lineChartObj = null;
+let currentType = 'expense'; 
+let currentMain = 'pie'; // 'pie' or 'line'
+const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6', '#6366f1'];
+
+// Переключение между Диаграммой и Линейным графиком
+function switchMain(view) {
+    currentMain = view;
+    if(view === 'pie') {
+        document.getElementById('btn-pie').className = 'btn btn-primary flex-fill fw-bold rounded-3 border-0 py-2 fs-5';
+        document.getElementById('btn-line').className = 'btn btn-light flex-fill fw-bold rounded-3 border-0 py-2 fs-5 text-secondary';
+        document.getElementById('view-pie').style.display = 'block';
+        document.getElementById('view-line').style.display = 'none';
+    } else {
+        document.getElementById('btn-line').className = 'btn btn-primary flex-fill fw-bold rounded-3 border-0 py-2 fs-5';
+        document.getElementById('btn-pie').className = 'btn btn-light flex-fill fw-bold rounded-3 border-0 py-2 fs-5 text-secondary';
+        document.getElementById('view-line').style.display = 'block';
+        document.getElementById('view-pie').style.display = 'none';
+    }
+    renderCurrent();
+}
+
+function renderCurrent() {
+    if(currentMain === 'pie') {
+        renderView(currentType);
+    } else {
+        renderLine();
+    }
+}
+
+// ----------------- ЛОГИКА ДИАГРАММЫ И ФИЛЬТРОВ -----------------
+function loadFilterCategories(type) {
+    fetch(`/api/categories?type=${type}`).then(res=>res.json()).then(data=>{
+        const container = document.getElementById('categoryCheckboxes');
+        let html = `<div class="form-check mb-3">
+                        <input class="form-check-input category-checkbox" type="checkbox" value="all" id="cat_all" checked onchange="toggleAllCategories(this)">
+                        <label class="form-check-label fw-bold text-dark fs-5" for="cat_all">Барлығын таңдау</label>
+                    </div><hr class="my-3 border-light">`;
+        data.forEach((c, index) => {
+            html += `<div class="form-check mb-2">
+                        <input class="form-check-input category-checkbox single-cat" type="checkbox" value="${c}" id="cat_${index}" checked onchange="uncheckAll(this)">
+                        <label class="form-check-label text-secondary fw-medium fs-6" for="cat_${index}">${c}</label>
+                    </div>`;
+        });
+        container.innerHTML = html;
+        renderCurrent();
+    });
+}
+
+function toggleAllCategories(allCheckbox) {
+    const checkboxes = document.querySelectorAll('.single-cat');
+    checkboxes.forEach(cb => cb.checked = allCheckbox.checked);
+    renderCurrent();
+}
+
+function uncheckAll(singleCheckbox) {
+    const allCheckbox = document.getElementById('cat_all');
+    if (!singleCheckbox.checked) {
+        allCheckbox.checked = false;
+    } else {
+        const checkboxes = document.querySelectorAll('.single-cat');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        allCheckbox.checked = allChecked;
+    }
+    renderCurrent();
+}
+
+function getSelectedCategories() {
+    const allCb = document.getElementById('cat_all');
+    if (allCb && allCb.checked) return 'all';
+    const selected = Array.from(document.querySelectorAll('.single-cat:checked')).map(cb => cb.value);
+    if (selected.length === 0) return 'none'; 
+    return selected.join(',');
+}
+
+window.switchTab = function(type) {
+    currentType = type;
+    document.getElementById('tab-expense').classList.remove('active');
+    document.getElementById('tab-income').classList.remove('active');
+    document.getElementById('tab-'+type).classList.add('active');
+    loadFilterCategories(type); 
+}
+
+function renderView(type) {
+    const dFrom = document.getElementById('dateFrom').value;
+    const dTo = document.getElementById('dateTo').value;
+    const cat = getSelectedCategories();
+    const acc = document.getElementById('filterAccount').value;
+    
+    fetch(`/api/stats?date_from=${dFrom}&date_to=${dTo}&type=${type}&category=${cat}&account_id=${acc}`).then(res => res.json()).then(data => {
+        document.getElementById('grandIncome').innerText = data.grand_income.toLocaleString('ru-RU');
+        document.getElementById('grandExpense').innerText = data.grand_expense.toLocaleString('ru-RU');
+        document.getElementById('grandBalance').innerText = data.grand_balance.toLocaleString('ru-RU');
+        
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        if (currentChart) currentChart.destroy();
+        document.getElementById('chartTotal').innerText = data.total.toLocaleString('ru-RU');
+        currentChart = new Chart(ctx, { type: 'doughnut', data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: colors, cutout: '75%', borderWidth: 0, hoverOffset: 6 }] }, options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false } });
+        
+        const list = document.getElementById('categoryList'); list.innerHTML = '';
+        if(data.details.length === 0) { list.innerHTML = '<div class="text-center text-muted mt-3 fw-medium fs-5">Бұл кезеңде деректер жоқ</div>'; return; }
+        data.details.forEach((item, i) => { list.innerHTML += `<div class="mb-4"><div class="d-flex justify-content-between mb-2"><span class="fw-bold text-dark fs-5"><i class="fa-solid fa-circle me-3" style="color:${colors[i%colors.length]}; font-size:14px;"></i>${item.category} <span class="ms-3 text-muted fw-medium fs-6">${item.percent}%</span></span><span class="fw-bold fs-5">${item.amount.toLocaleString('ru-RU')}</span></div><div class="progress" style="height: 10px; border-radius: 10px; background-color: #444;"><div class="progress-bar" style="width: ${item.percent}%; background-color: ${colors[i%colors.length]}; border-radius: 10px;"></div></div></div>`; });
+    });
+}
+
+// ----------------- ЛОГИКА ЛИНЕЙНОГО ГРАФИКА (LINE) -----------------
+function renderLine() {
+    const dFrom = document.getElementById('dateFrom').value;
+    const dTo = document.getElementById('dateTo').value;
+    const cat = getSelectedCategories();
+    const acc = document.getElementById('filterAccount').value;
+    
+    // Запрашиваем тренды с учетом фильтра дат и категорий
+    fetch(`/api/trend?date_from=${dFrom}&date_to=${dTo}&type=${currentType}&category=${cat}&account_id=${acc}`).then(res => res.json()).then(data => {
+        const ctx = document.getElementById('lineTrendChart').getContext('2d');
+        if (lineChartObj) lineChartObj.destroy();
+        lineChartObj = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: data.datasets
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { position: 'bottom', labels: {font: {size: 14}} } },
+                scales: { 
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    });
+}
+
+// ----------------- ЭКСПОРТ -----------------
+function exportData(format) {
+    const dFrom = document.getElementById('dateFrom').value;
+    const dTo = document.getElementById('dateTo').value;
+    const acc = document.getElementById('filterAccount').value;
+    const cat = getSelectedCategories();
+    const mode = document.getElementById('mode_summary').checked ? 'summary' : 'exact';
+    
+    if (cat === 'none' && currentMain === 'pie') { alert("Экспорт үшін кем дегенде бір санатты таңдаңыз!"); return; }
+    
+    const exportCat = currentMain === 'pie' ? cat : 'all';
+    const exportType = currentMain === 'pie' ? currentType : 'all';
+    window.location.href = `/export/${format}?date_from=${dFrom}&date_to=${dTo}&type=${exportType}&category=${exportCat}&account_id=${acc}&calc_mode=${mode}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => { 
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    
+    const dateFromInput = document.getElementById('dateFrom');
+    const dateToInput = document.getElementById('dateTo');
+    
+    dateFromInput.value = `${yyyy}-${mm}-01`;
+    dateToInput.value = `${yyyy}-${mm}-${new Date(yyyy, d.getMonth() + 1, 0).getDate()}`;
+
+    flatpickr('.custom-datepicker', { locale: "kz", dateFormat: "Y-m-d", disableMobile: "true", onChange: function() { renderCurrent(); } });
+    loadFilterCategories(currentType); 
+});
+</script>
+{% endblock %}

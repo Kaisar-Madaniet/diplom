@@ -1,0 +1,117 @@
+{% extends 'base.html' %} 
+{% block content %} 
+<div class="container-fluid px-4 mt-4">
+    <div class="custom-header mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <i class="fa-solid fa-bars fs-4 text-white-custom" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" style="cursor:pointer;"></i>
+            <h4 class="m-0 fw-bold mx-auto text-white-custom">Менің қаржым</h4>
+            <div style="width: 24px;"></div>
+        </div>
+        <div class="balance-card p-4 text-center shadow-sm bg-white">
+            <div class="row g-0 align-items-center">
+                <div class="col-4 border-end">
+                    <small class="text-muted d-block fw-medium mb-1 fs-6">Кірістер</small>
+                    <span class="fw-bold text-success fs-3">{{ income }}</span>
+                </div>
+                <div class="col-4 border-end">
+                    <small class="text-muted d-block fw-medium mb-1 fs-6">Теңгерім</small>
+                    <span class="fw-bold text-primary fs-3">{{ balance }}</span>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted d-block fw-medium mb-1 fs-6">Шығыстар</small>
+                    <span class="fw-bold text-danger fs-3">{{ expense }}</span>
+                </div>
+            </div>
+        </div>
+    </div> 
+
+    <div id="transaction-list">
+        {% for group in grouped_transactions %} 
+        <div class="record-group mb-4 bg-white shadow-sm transaction-group" {% if loop.index > 5 %}style="display: none;"{% endif %}>
+            <div class="d-flex flex-wrap justify-content-between align-items-center px-4 py-3 bg-light border-bottom">
+                <span class="text-dark fs-5 fw-bold">{{ group.date_str }}</span>
+                <div class="d-flex gap-4 fw-bold mt-2 mt-md-0 fs-6">
+                    <span class="text-success"><i class="fa-solid fa-arrow-up"></i> Кіріс: {{ group.day_income }}</span>
+                    <span class="text-danger"><i class="fa-solid fa-arrow-down"></i> Шығыс: {{ group.day_expense }}</span>
+                    <span class="text-primary"><i class="fa-solid fa-scale-balanced"></i> Теңгерім: {{ group.day_balance }}</span>
+                </div>
+            </div>
+            <div class="list-group list-group-flush bg-white rounded-bottom-3"> 
+                {% for item in group['items'] %} 
+                <div class="list-group-item d-flex justify-content-between align-items-center py-4 px-4 border-0 border-bottom" data-bs-toggle="modal" data-bs-target="#editModal{{ item.id }}" style="cursor:pointer;">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle d-flex justify-content-center align-items-center me-4 shadow-sm" style="width: 55px; height: 55px; background-color: {{ '#dcfce7' if item.type == 'income' else '#fee2e2' }};">
+                            <i class="fa-solid {{ 'fa-arrow-up text-success' if item.type == 'income' else 'fa-arrow-down text-danger' }} fs-4"></i>
+                        </div>
+                        <div>
+                            <span class="fw-bold text-dark fs-5 d-block">{{ item['category'] }} <span class="badge bg-secondary ms-1" style="font-size: 0.65rem; font-weight: normal;">{{ item['acc_name'] }}</span></span>
+                            <small class="text-muted fw-medium fs-6">Өңдеу</small>
+                        </div>
+                    </div>
+                    <div class="fw-bold {{ 'text-success' if item['type'] == 'income' else 'text-danger' }} fs-4">
+                        {{ '+' if item['type'] == 'income' else '-' }}{{ item['amount'] }}
+                    </div>
+                </div> 
+                <div class="modal fade" id="editModal{{ item.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 rounded-4 shadow-lg"><div class="modal-header bg-primary text-white border-0 rounded-top-4 p-4"><h4 class="modal-title fw-bold">Өңдеу</h4><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form action="/edit/{{ item.id }}" method="POST"><div class="modal-body p-4">
+                    
+                    <select name="account_id" class="form-select form-select-lg mb-4 bg-light border-0 shadow-sm fw-medium">
+                        {% for acc in user_accounts %}
+                        <option value="{{ acc.id }}" {% if item['account_id'] == acc.id %}selected{% endif %}>{{ acc.name }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <input type="hidden" name="type" value="{{ item['type'] }}">
+                    <input type="text" class="form-control form-control-lg mb-4 bg-light border-0 shadow-sm fw-medium text-muted" value="{{ 'Шығыс' if item['type'] == 'expense' else 'Кіріс' }}" readonly title="Операция түрін өзгерту мүмкін емес">
+                    
+                    <input type="hidden" name="category" value="{{ item['category'] }}">
+                    <input type="text" class="form-control form-control-lg mb-4 bg-light border-0 shadow-sm fw-medium text-muted" value="{{ item['category'] }}" readonly title="Санатты өзгерту мүмкін емес">
+                    
+                    <input type="number" step="0.01" name="amount" class="form-control form-control-lg mb-4 bg-light border-0 shadow-sm fw-bold" value="{{ item['amount'] }}" required>
+                    
+                    <input type="date" name="date" class="form-control form-control-lg mb-4 bg-light border-0 shadow-sm fw-medium" value="{{ item['date'] }}" required>
+                    
+                </div><div class="modal-footer border-0 d-flex justify-content-between p-4 pt-0"><a href="/delete/{{ item.id }}" class="btn btn-danger btn-lg py-3 px-5 shadow-sm fw-bold rounded-3">Жою</a><button type="submit" class="btn btn-primary btn-lg py-3 px-5 shadow-sm fw-bold rounded-3">Сақтау</button></div></form></div></div></div> 
+                {% endfor %} 
+            </div>
+        </div> 
+        {% endfor %} 
+    </div>
+
+    {% if grouped_transactions|length > 5 %}
+    <div class="text-center mt-4 mb-5">
+        <button id="loadMoreBtn" class="btn btn-outline-primary btn-lg fw-bold py-2 px-5 rounded-pill shadow-sm">Тағы көрсету</button>
+    </div>
+    {% endif %}
+
+    {% if not grouped_transactions %}
+    <div class="text-center mt-5 p-5 text-muted">
+        <div class="mb-4"><i class="fa-solid fa-folder-open text-secondary opacity-50" style="font-size: 5rem;"></i></div>
+        <h3 class="fw-bold text-dark">Жазбалар жоқ</h3>
+        <p class="fs-5">Бірінші операцияны қосу үшін мәзірді ашып, "Жаңа жазба" түймесін басыңыз!</p>
+    </div>
+    {% endif %} 
+</div>
+
+<script>
+    // ПАГИНАЦИЯ (Беттерге бөлу) ЛОГИКАСЫ
+    document.addEventListener('DOMContentLoaded', function() {
+        let currentVisible = 5;
+        const groups = document.querySelectorAll('.transaction-group');
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', () => {
+                let shown = 0;
+                for(let i = currentVisible; i < groups.length && shown < 5; i++) {
+                    groups[i].style.display = 'block';
+                    currentVisible++;
+                    shown++;
+                }
+                if (currentVisible >= groups.length) {
+                    loadMoreBtn.style.display = 'none'; // Егер бәрі көрінсе, түймені жасырамыз
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

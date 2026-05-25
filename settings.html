@@ -1,0 +1,132 @@
+{% extends 'base.html' %} {% block content %} 
+<div class="container-fluid px-4 mt-4">
+    <div class="custom-header mb-5"><div class="d-flex align-items-center"><i class="fa-solid fa-bars fs-4 text-white-custom me-4" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" style="cursor:pointer;"></i><h4 class="m-0 fw-bold text-white-custom">Баптаулар</h4></div></div> 
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, msg in messages %} <div class="alert alert-{{ category }} rounded-3 fw-bold fs-5">{{ msg }}</div> {% endfor %} {% endif %} {% endwith %} 
+    
+    <div class="custom-tabs d-flex mb-4 shadow-sm bg-white rounded-4 p-1">
+        <div class="tab flex-fill active py-3 fs-5" id="tab-cat" onclick="switchSettingsTab('cat')">Санаттар</div>
+        <div class="tab flex-fill py-3 fs-5" id="tab-acc" onclick="switchSettingsTab('acc')">Шоттар</div>
+    </div>
+    
+    <div id="view-cat">
+        <div class="card shadow-sm border-0 mb-5 rounded-4 bg-white">
+            <div class="card-body p-5">
+                <h5 class="fw-bold mb-4 text-dark">Санат қосу</h5>
+                <form action="/settings" method="POST" class="row g-4 align-items-center">
+                    <input type="hidden" name="action" value="add_cat">
+                    <div class="col-md-4">
+                        <select name="type" id="addCatType" class="form-select form-select-lg bg-light border-0 shadow-sm fw-medium text-secondary" onchange="switchSettingsTab(this.value)">
+                            <option value="expense">Шығыстар үшін</option>
+                            <option value="income">Кірістер үшін</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" name="name" class="form-control form-control-lg bg-light border-0 shadow-sm fw-medium" placeholder="Атауы..." required>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm rounded-3">ОК</button>
+                    </div>
+                </form>
+            </div>
+        </div> 
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+            <h4 class="fw-bold m-0 text-dark" id="catListTitle">Санаттар: Шығыстар</h4>
+        </div>
+        
+        <div class="list-group shadow-sm rounded-4 border-0 mb-5" id="expenseList"> 
+            {% for cat in expense_cats %} 
+            <div class="list-group-item d-flex justify-content-between align-items-center py-4 px-5 border-0 border-bottom">
+                <div><span class="badge bg-danger me-4 rounded-pill px-4 py-2 shadow-sm fs-6">Шығыс</span><span class="fw-bold text-dark fs-5">{{ cat.name }}</span></div>
+                <div>
+                    <button class="btn btn-secondary me-2 p-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#editCatModal{{ cat.id }}"><i class="fa-solid fa-pen"></i></button>
+                    <a href="/delete_category/{{ cat.id }}" class="btn btn-danger p-2 shadow-sm"><i class="fa-solid fa-trash"></i></a>
+                </div>
+            </div> 
+            <div class="modal fade" id="editCatModal{{ cat.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 rounded-4 shadow-lg"><div class="modal-header bg-primary text-white border-0 rounded-top-4"><h5 class="modal-title fw-bold">Санатты өңдеу</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form action="/edit_category/{{ cat.id }}" method="POST"><div class="modal-body p-4"><label class="form-label small text-muted fw-bold mb-2">Жаңа атауы</label><input type="text" name="name" class="form-control form-control-lg bg-light border-0 shadow-sm fw-medium" value="{{ cat.name }}" required></div><div class="modal-footer border-0 p-4 pt-0"><button type="submit" class="btn btn-primary btn-lg w-100 fw-bold py-2 shadow-sm rounded-3">Сақтау</button></div></form></div></div></div>
+            {% endfor %} 
+        </div>
+        
+        <div class="list-group shadow-sm rounded-4 border-0 mb-5" id="incomeList" style="display: none;"> 
+            {% for cat in income_cats %} 
+            <div class="list-group-item d-flex justify-content-between align-items-center py-4 px-5 border-0 border-bottom">
+                <div><span class="badge bg-success me-4 rounded-pill px-4 py-2 shadow-sm fs-6">Кіріс</span><span class="fw-bold text-dark fs-5">{{ cat.name }}</span></div>
+                <div>
+                    <button class="btn btn-secondary me-2 p-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#editCatModal{{ cat.id }}"><i class="fa-solid fa-pen"></i></button>
+                    <a href="/delete_category/{{ cat.id }}" class="btn btn-danger p-2 shadow-sm"><i class="fa-solid fa-trash"></i></a>
+                </div>
+            </div> 
+            <div class="modal fade" id="editCatModal{{ cat.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 rounded-4 shadow-lg"><div class="modal-header bg-primary text-white border-0 rounded-top-4"><h5 class="modal-title fw-bold">Санатты өңдеу</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form action="/edit_category/{{ cat.id }}" method="POST"><div class="modal-body p-4"><label class="form-label small text-muted fw-bold mb-2">Жаңа атауы</label><input type="text" name="name" class="form-control form-control-lg bg-light border-0 shadow-sm fw-medium" value="{{ cat.name }}" required></div><div class="modal-footer border-0 p-4 pt-0"><button type="submit" class="btn btn-primary btn-lg w-100 fw-bold py-2 shadow-sm rounded-3">Сақтау</button></div></form></div></div></div>
+            {% endfor %} 
+        </div>
+    </div>
+    
+    <div id="view-acc" style="display: none;">
+        <div class="card shadow-sm border-0 mb-5 rounded-4 bg-white">
+            <div class="card-body p-5">
+                <h5 class="fw-bold mb-4 text-dark">Шот қосу</h5>
+                <form action="/settings" method="POST" class="row g-4 align-items-center">
+                    <input type="hidden" name="action" value="add_acc">
+                    <div class="col-md-9">
+                        <input type="text" name="name" class="form-control form-control-lg bg-light border-0 shadow-sm fw-medium" placeholder="Шот атауы (мысалы: Kaspi Gold)" required>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm rounded-3">ОК</button>
+                    </div>
+                </form>
+            </div>
+        </div> 
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+            <h4 class="fw-bold m-0 text-dark">Барлық шоттар</h4>
+        </div>
+        
+        <div class="list-group shadow-sm rounded-4 border-0 mb-5"> 
+            {% for acc in user_accounts %} 
+            <div class="list-group-item d-flex justify-content-between align-items-center py-4 px-5 border-0 border-bottom">
+                <div><span class="badge bg-primary me-4 rounded-pill px-4 py-2 shadow-sm fs-6"><i class="fa-solid fa-wallet"></i></span><span class="fw-bold text-dark fs-5">{{ acc.name }}</span></div>
+                <div>
+                    <button class="btn btn-secondary me-2 p-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#editAccModal{{ acc.id }}"><i class="fa-solid fa-pen"></i></button>
+                    <a href="/delete_account/{{ acc.id }}" class="btn btn-danger p-2 shadow-sm"><i class="fa-solid fa-trash"></i></a>
+                </div>
+            </div> 
+            
+            <div class="modal fade" id="editAccModal{{ acc.id }}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 rounded-4 shadow-lg">
+                        <div class="modal-header bg-primary text-white border-0 rounded-top-4">
+                            <h5 class="modal-title fw-bold">Шотты өңдеу</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form action="/edit_account/{{ acc.id }}" method="POST">
+                            <div class="modal-body p-4">
+                                <label class="form-label small text-muted fw-bold mb-2">Жаңа атауы</label>
+                                <input type="text" name="name" class="form-control form-control-lg bg-light border-0 shadow-sm fw-medium" value="{{ acc.name }}" required>
+                            </div>
+                            <div class="modal-footer border-0 p-4 pt-0">
+                                <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold py-2 shadow-sm rounded-3">Сақтау</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %} 
+        </div>
+    </div>
+</div> 
+<script>
+function switchSettingsTab(tab) {
+    if(tab === 'cat') {
+        document.getElementById('tab-cat').classList.add('active');
+        document.getElementById('tab-acc').classList.remove('active');
+        document.getElementById('view-cat').style.display = 'block';
+        document.getElementById('view-acc').style.display = 'none';
+    } else {
+        document.getElementById('tab-acc').classList.add('active');
+        document.getElementById('tab-cat').classList.remove('active');
+        document.getElementById('view-acc').style.display = 'block';
+        document.getElementById('view-cat').style.display = 'none';
+    }
+}
+</script> 
+{% endblock %}
